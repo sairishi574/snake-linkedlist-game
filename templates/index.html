@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Snake Game using Linked List (Flask Web)</title>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      background-color: #111;
+      display: block;
+      margin: 20px auto;
+      border: 2px solid white;
+    }
+  </style>
+</head>
+<body>
+  <h2>🐍 Snake Game using Linked List (Flask + Python)</h2>
+  <h3>Score: <span id="score">0</span></h3>
+  <canvas id="game" width="600" height="400"></canvas>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const cols = 30, rows = 20;
+    const cell = 20;
+    let dir = 'right';
+    let running = true;
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowUp') dir = 'up';
+      if (e.key === 'ArrowDown') dir = 'down';
+      if (e.key === 'ArrowLeft') dir = 'left';
+      if (e.key === 'ArrowRight') dir = 'right';
+    });
+
+    async function getState() {
+      const res = await fetch('/state');
+      return res.json();
+    }
+
+    async function move() {
+      const res = await fetch('/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dir })
+      });
+      return res.json();
+    }
+
+    async function gameLoop() {
+      if (!running) return;
+
+      const moveRes = await move();
+      const state = await getState();
+
+      if (moveRes.status === 'gameover') {
+        alert(`Game Over! Final Score: ${moveRes.score}`);
+        location.reload();
+        return;
+      }
+
+      document.getElementById('score').innerText = state.score;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw snake
+      ctx.fillStyle = 'lime';
+      for (let [x, y] of state.snake) {
+        ctx.fillRect(x * cell, y * cell, cell - 1, cell - 1);
+      }
+
+      // Draw food
+      ctx.fillStyle = 'red';
+      ctx.fillRect(state.food[0] * cell, state.food[1] * cell, cell - 1, cell - 1);
+
+      setTimeout(gameLoop, 150);
+    }
+
+    getState().then(gameLoop);
+  </script>
+</body>
+</html>
