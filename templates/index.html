@@ -1,86 +1,96 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Snake Game using Linked List (Flask Web)</title>
+  <meta charset="UTF-8">
+  <title>Snake Game using Linked List (Flask + Python)</title>
   <style>
     body {
-      background-color: black;
-      color: white;
       text-align: center;
       font-family: Arial, sans-serif;
+      background-color: #000;
+      color: white;
     }
     canvas {
+      border: 1px solid white;
       background-color: #111;
-      display: block;
-      margin: 20px auto;
-      border: 2px solid white;
     }
   </style>
 </head>
 <body>
-  <h2>🐍 Snake Game using Linked List (Flask + Python)</h2>
+  <h2>🌀 Snake Game using Linked List (Flask + Python)</h2>
   <h3>Score: <span id="score">0</span></h3>
-  <canvas id="game" width="600" height="400"></canvas>
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
 
   <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    const cols = 30, rows = 20;
-    const cell = 20;
-    let dir = 'right';
-    let running = true;
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-    document.addEventListener('keydown', e => {
-      if (e.key === 'ArrowUp') dir = 'up';
-      if (e.key === 'ArrowDown') dir = 'down';
-      if (e.key === 'ArrowLeft') dir = 'left';
-      if (e.key === 'ArrowRight') dir = 'right';
-    });
+    const box = 20;
+    let snake = [{x: 200, y: 200}];
+    let direction = "RIGHT";
+    let food = {
+      x: Math.floor(Math.random() * 20) * box,
+      y: Math.floor(Math.random() * 20) * box
+    };
+    let score = 0;
 
-    async function getState() {
-      const res = await fetch('/state');
-      return res.json();
+    document.addEventListener("keydown", changeDirection);
+
+    function changeDirection(event) {
+      if (event.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+      else if (event.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+      else if (event.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+      else if (event.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
     }
 
-    async function move() {
-      const res = await fetch('/move', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dir })
-      });
-      return res.json();
-    }
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    async function gameLoop() {
-      if (!running) return;
+      // Draw food
+      ctx.fillStyle = "red";
+      ctx.fillRect(food.x, food.y, box, box);
 
-      const moveRes = await move();
-      const state = await getState();
+      // Move snake
+      let headX = snake[0].x;
+      let headY = snake[0].y;
+      if (direction === "LEFT") headX -= box;
+      if (direction === "RIGHT") headX += box;
+      if (direction === "UP") headY -= box;
+      if (direction === "DOWN") headY += box;
 
-      if (moveRes.status === 'gameover') {
-        alert(`Game Over! Final Score: ${moveRes.score}`);
-        location.reload();
+      const newHead = {x: headX, y: headY};
+
+      // Check collision with walls or itself
+      if (
+        headX < 0 || headY < 0 ||
+        headX >= canvas.width || headY >= canvas.height ||
+        snake.some(seg => seg.x === headX && seg.y === headY)
+      ) {
+        clearInterval(game);
+        alert("Game Over! Final Score: " + score);
         return;
       }
 
-      document.getElementById('score').innerText = state.score;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw snake
-      ctx.fillStyle = 'lime';
-      for (let [x, y] of state.snake) {
-        ctx.fillRect(x * cell, y * cell, cell - 1, cell - 1);
+      // Eat food
+      if (headX === food.x && headY === food.y) {
+        score++;
+        document.getElementById("score").textContent = score;
+        food = {
+          x: Math.floor(Math.random() * 20) * box,
+          y: Math.floor(Math.random() * 20) * box
+        };
+      } else {
+        snake.pop();
       }
 
-      // Draw food
-      ctx.fillStyle = 'red';
-      ctx.fillRect(state.food[0] * cell, state.food[1] * cell, cell - 1, cell - 1);
+      snake.unshift(newHead);
 
-      setTimeout(gameLoop, 150);
+      // Draw snake
+      ctx.fillStyle = "lime";
+      snake.forEach(segment => ctx.fillRect(segment.x, segment.y, box, box));
     }
 
-    getState().then(gameLoop);
+    let game = setInterval(draw, 100);
   </script>
 </body>
 </html>
